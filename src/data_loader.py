@@ -60,7 +60,7 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
     ]
     missing_cols = set(expected_cols) - set(df.columns)
     if missing_cols:
-        raise ValueError(f"缺失必需列: {missing_cols}")
+        raise ValueError(f"缺失必需列: {missing_cols}")      #raise主动抛出异常,阻止后续代码运行，如果空，跳过执行
     print(f"[数据校验] 所有 {len(expected_cols)} 个必需列存在 OK")
 
     # ---- 数值范围校验 ----
@@ -81,7 +81,7 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
 
     # ---- 类别列校验 ----
     expected_modes = {"Air", "Rail", "Road", "Sea"}
-    actual_modes = set(df["Transport_Mode"].unique()) if "Transport_Mode" in df.columns else set()
+    actual_modes = set(df["Transport_Mode"].unique()) if "Transport_Mode" in df.columns else set()   #三元运算符 结果 if 条件 else 结果B 
     if actual_modes - expected_modes:
         print(f"[数据校验] WARNING 未知运输模式: {actual_modes - expected_modes}")
 
@@ -123,11 +123,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         清洗后的数据框
     """
     # 检查缺失值
-    missing = df.isnull().sum()
+    missing = df.isnull().sum()    #对每个单元格判断是否缺失（NaN、None、NaT 等），返回布尔型 DataFrame，按列求和，True=1，False=0，得到每列的缺失值数量
     if missing.sum() > 0:
         print(f"[数据清洗] 发现缺失值:\n{missing[missing > 0]}")
         # 数值列用中位数填充
-        num_cols = df.select_dtypes(include=[np.number]).columns
+        num_cols = df.select_dtypes(include=[np.number]).columns   #按类型筛选，只保留数值列
         for col in num_cols:
             if df[col].isnull().sum() > 0:
                 df[col] = df[col].fillna(df[col].median())
@@ -135,7 +135,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         cat_cols = df.select_dtypes(include=["object", "string"]).columns
         for col in cat_cols:
             if df[col].isnull().sum() > 0:
-                df[col] = df[col].fillna(df[col].mode()[0])
+                df[col] = df[col].fillna(df[col].mode()[0])  #计算众数，由于众数可能有多个，取第一个
     else:
         print("[数据清洗] 无缺失值，数据质量良好 OK")
 
@@ -228,7 +228,7 @@ def prepare_data(data_path: str | None = None) -> pd.DataFrame:
         处理后的完整数据框
     """
     df = load_raw_data(data_path)
-    df = validate_data(df)  # 清洗前先校验数据质量
+    df = validate_data(df)              #  清洗前先校验数据质量
     df = clean_data(df)
     df = engineer_features(df)
     print(f"[数据准备] 完成！数据维度: {df.shape}")

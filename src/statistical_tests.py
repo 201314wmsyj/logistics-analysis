@@ -128,7 +128,7 @@ def test_lead_time_by_mode(df: pd.DataFrame) -> dict:
     groups = [
         df.loc[df["Transport_Mode"] == mode, "Lead_Time_Days"].values
         for mode in df["Transport_Mode"].unique()
-    ]
+    ]   #筛选出该运输方式的所有行
     mode_names = list(df["Transport_Mode"].unique())
 
     f_stat, p_value = stats.f_oneway(*groups)

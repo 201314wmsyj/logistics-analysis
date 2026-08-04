@@ -362,9 +362,9 @@ def _prepare_model_features(df: pd.DataFrame) -> tuple:
     feature_cols = [
         "Distance_km",
         "Weight_MT",
-        "Fuel_Price_Index",
         "Geopolitical_Risk_Score",
         "Carrier_Reliability_Score",
+        "Speed_km_per_day",
     ]
 
     df_model = df.copy()
