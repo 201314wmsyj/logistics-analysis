@@ -25,7 +25,7 @@ from pathlib import Path
 
 # 修复 Windows 终端编码问题
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # pyright: ignore[reportAttributeAccessIssue]
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
 # 添加 src 目录到路径
