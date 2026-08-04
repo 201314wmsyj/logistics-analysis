@@ -9,13 +9,12 @@
 """
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 
-def load_raw_data(data_path: Optional[str] = None) -> pd.DataFrame:
+def load_raw_data(data_path: str | None = None) -> pd.DataFrame:
     """
     加载原始 CSV 数据。
 
@@ -214,7 +213,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def prepare_data(data_path: str = None) -> pd.DataFrame:
+def prepare_data(data_path: str | None = None) -> pd.DataFrame:
     """
     完整的数据准备流程：加载 -> 校验 -> 清洗 -> 特征工程
 

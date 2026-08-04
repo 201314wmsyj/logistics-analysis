@@ -18,13 +18,12 @@
 import numpy as np
 import pandas as pd
 
-
 # ================================================================
 # 共享工具函数
 # ================================================================
 
 def _bootstrap_means(rng: np.random.Generator, values: np.ndarray,
-                     n_samples: int, sample_size: int = None) -> np.ndarray:
+                     n_samples: int, sample_size: int | None = None) -> np.ndarray:
     """
     通用 Bootstrap 均值重抽样。
 
@@ -52,7 +51,7 @@ def _bootstrap_means(rng: np.random.Generator, values: np.ndarray,
 
 def _weighted_bootstrap_means(rng: np.random.Generator, values: np.ndarray,
                               weights: np.ndarray, n_samples: int,
-                              sample_size: int = None) -> np.ndarray:
+                              sample_size: int | None = None) -> np.ndarray:
     """
     加权 Bootstrap 均值重抽样（用于压力测试）。
 
@@ -296,8 +295,8 @@ class MonteCarloEngine:
           - Bootstrap 使用保留集的预测概率分布，避免 overfitting bias
         """
         from sklearn.linear_model import LogisticRegression
-        from sklearn.model_selection import train_test_split
         from sklearn.metrics import roc_auc_score
+        from sklearn.model_selection import train_test_split
 
         df = self.df.copy()
 

@@ -8,12 +8,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import numpy as np
 import pandas as pd
 import pytest
+
 from src.monte_carlo import (
     MonteCarloEngine,
     _bootstrap_means,
     _weighted_bootstrap_means,
     run_monte_carlo_analysis,
 )
+
 
 @pytest.fixture
 def sample_df():

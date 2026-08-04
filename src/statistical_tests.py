@@ -18,10 +18,11 @@ __test__ = False  # Prevent pytest from collecting test_ functions directly
   - ANOVA 显著时自动运行 Tukey HSD 事后检验，识别具体哪些组间存在差异
 """
 
-import pandas as pd
-import numpy as np
-from scipy import stats
 from itertools import combinations
+
+import numpy as np
+import pandas as pd
+from scipy import stats
 
 
 def _significance_label(p_value: float, corrected: bool = False) -> str:
@@ -215,7 +216,7 @@ def test_disruption_independence(df: pd.DataFrame) -> dict:
 
     for var in ["Transport_Mode", "Product_Category"]:
         contingency = pd.crosstab(df[var], df["Disruption_Occurred"])
-        chi2, p_value, dof, expected = stats.chi2_contingency(contingency.values)
+        chi2, p_value, dof, _expected = stats.chi2_contingency(contingency.values)
         v = _cramers_v(contingency)
         label = _significance_label(p_value)
 
@@ -250,7 +251,7 @@ def test_weather_disruption(df: pd.DataFrame) -> dict:
     print("-" * 45)
 
     contingency = pd.crosstab(df["Weather_Condition"], df["Disruption_Occurred"])
-    chi2, p_value, dof, expected = stats.chi2_contingency(contingency.values)
+    chi2, p_value, dof, _expected = stats.chi2_contingency(contingency.values)
     v = _cramers_v(contingency)
     label = _significance_label(p_value)
 
@@ -288,7 +289,7 @@ def test_risk_level_disruption(df: pd.DataFrame) -> dict:
     print("-" * 45)
 
     contingency = pd.crosstab(df["Risk_Level"], df["Disruption_Occurred"])
-    chi2, p_value, dof, expected = stats.chi2_contingency(contingency.values)
+    chi2, p_value, dof, _expected = stats.chi2_contingency(contingency.values)
     v = _cramers_v(contingency)
     label = _significance_label(p_value)
 

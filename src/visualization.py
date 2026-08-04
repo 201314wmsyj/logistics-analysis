@@ -20,18 +20,17 @@
   14. 统计效应量汇总 (水平柱状图)
 """
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import pandas as pd
 from pathlib import Path
 
 # ============================================================
 # 全局样式设置
 # ============================================================
-
 # 中文字体设置 - 尝试多种字体以兼容不同系统
 import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
 # 查找可用的中文字体
 _chinese_fonts = [f.name for f in fm.fontManager.ttflist if any(kw in f.name.lower() for kw in ['microsoft yahei', 'simhei', 'simsun', 'noto sans cjk', 'wenquanyi', 'source han'])]
@@ -157,7 +156,7 @@ def plot_lead_time_distribution(df: pd.DataFrame):
             color="darkred",
             ha="center",
             va="bottom",
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8, edgecolor="gray"),
+            bbox={'boxstyle': "round,pad=0.3", 'facecolor': "white", 'alpha': 0.8, 'edgecolor': "gray"},
         )
 
     ax.set_title("Lead Time Distribution by Transport Mode", fontsize=14, fontweight="bold", pad=15)
@@ -432,7 +431,7 @@ def plot_route_performance(df: pd.DataFrame, top_n: int = 15):
 
     ax.text(0.98, 0.02, "Bubble size = Shipment volume\nDashed lines = median values",
             transform=ax.transAxes, fontsize=8, ha="right", va="bottom",
-            bbox=dict(boxstyle="round", facecolor="lightyellow", alpha=0.8))
+            bbox={'boxstyle': "round", 'facecolor': "lightyellow", 'alpha': 0.8})
 
     plt.tight_layout()
     _save_and_show(fig, "07_route_performance_bubble.png")
@@ -857,8 +856,8 @@ def run_all_visualizations(
     df: pd.DataFrame,
     feature_importance: pd.DataFrame = None,
     model_comparison=None,
-    mc_results: dict = None,
-    test_results: dict = None,
+    mc_results: dict | None = None,
+    test_results: dict | None = None,
 ):
     """生成所有图表（包括可选的高级分析图表）"""
     print("\n" + "=" * 55)
@@ -900,8 +899,8 @@ def run_all_visualizations(
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, str(Path(__file__).parent))
-    from data_loader import prepare_data
     from analysis import run_all_analysis
+    from data_loader import prepare_data
 
     df = prepare_data()
     results = run_all_analysis(df)

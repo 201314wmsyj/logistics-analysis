@@ -27,7 +27,6 @@ from sklearn.metrics import (
 from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-
 # ============================================================
 # 1. 供应链中断分析 (Disruption Analysis)
 # ============================================================

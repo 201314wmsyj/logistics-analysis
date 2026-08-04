@@ -11,6 +11,7 @@ import pytest
 
 import src.statistical_tests as st_mod
 
+
 @pytest.fixture
 def sample_df():
     rng = np.random.default_rng(42)
