@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model persistence
+models/*.joblib
+
+# Output charts (generated, not committed)
+output/*.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config overrides (keep defaults in config.yaml)
+config.local.yaml
+
+#
+项目框架与技术栈详解.md
+项目深度讲解文档.md

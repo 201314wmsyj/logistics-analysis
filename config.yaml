@@ -1,0 +1,43 @@
+# ============================================================
+# Global Supply Chain Risk & Logistics — Configuration
+# ============================================================
+
+data:
+  csv_path: "data/global_supply_chain_risk_2026.csv"
+
+features:
+  risk_bins: [0, 3, 6, 10]
+  risk_labels: ["Low", "Medium", "High"]
+  lead_time_bins: [0, 5, 15, 30, 999]
+  lead_time_labels: ["Express (<5d)", "Standard (5-15d)", "Long (15-30d)", "Very Long (>30d)"]
+
+model:
+  random_state: 42
+  test_size: 0.2
+  cv_folds: 5
+  rf_n_estimators: 200
+  rf_max_depth: 8
+  rf_min_samples_leaf: 20
+
+monte_carlo:
+  random_seed: 42
+  default_samples: 10000
+  cost_per_disruption_usd: 5000.0
+  cost_per_day_overrun_usd: 200.0
+  geopolitical_risk_shift: 2.0
+  weather_weight_multiplier: 3.0
+  reliability_improvement_pct: 0.10
+
+viz:
+  dpi: 150
+  output_dir: "output"
+  palette:
+    blue: "#2E86AB"
+    red: "#A23B72"
+    green: "#3A7D44"
+    orange: "#F18F01"
+    purple: "#6A4C93"
+
+output:
+  models_dir: "models"
+  reports_dir: "reports"
