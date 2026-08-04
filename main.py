@@ -19,8 +19,8 @@
   python main.py
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 修复 Windows 终端编码问题
@@ -32,10 +32,10 @@ if sys.platform == "win32":
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 
-from data_loader import prepare_data
 from analysis import run_all_analysis
-from statistical_tests import run_statistical_tests
+from data_loader import prepare_data
 from monte_carlo import MonteCarloEngine, run_monte_carlo_analysis
+from statistical_tests import run_statistical_tests
 from visualization import run_all_visualizations
 
 

@@ -13,21 +13,19 @@
 """
 
 import pandas as pd
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.dummy import DummyClassifier
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    classification_report,
-    confusion_matrix,
-    roc_auc_score,
     accuracy_score,
+    classification_report,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
+    roc_auc_score,
 )
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 
 # ============================================================
@@ -129,7 +127,7 @@ def lead_time_analysis(df: pd.DataFrame) -> dict:
     print("=" * 55)
 
     lt = df["Lead_Time_Days"]
-    print(f"\n整体时效统计:")
+    print("\n整体时效统计:")
     print(f"  平均     : {lt.mean():.1f} 天")
     print(f"  中位数   : {lt.median():.1f} 天")
     print(f"  标准差   : {lt.std():.1f} 天")
@@ -439,7 +437,7 @@ def build_disruption_model(df: pd.DataFrame) -> dict:
     baseline_rate = y.mean()
     print(f"\n  中断基准率 (Baseline): {baseline_rate:.2%}")
     print(f"     若全猜中断，准确率 = {baseline_rate:.2%}")
-    print(f"     模型必须显著超越此基线才有实用价值\n")
+    print("     模型必须显著超越此基线才有实用价值\n")
 
     # ---- 模型列表 ----
     models = {
@@ -541,7 +539,7 @@ def run_all_analysis(df: pd.DataFrame, skip_basic_prints: bool = False) -> dict:
     results = {}
 
     # 数据概览
-    print(f"\n[数据概览]")
+    print("\n[数据概览]")
     print(f"  时间范围: {df['Date'].min().strftime('%Y-%m-%d')} ~ {df['Date'].max().strftime('%Y-%m-%d')}")
     print(f"  出发港口: {df['Origin_Port'].nunique()}")
     print(f"  目的港口: {df['Destination_Port'].nunique()}")

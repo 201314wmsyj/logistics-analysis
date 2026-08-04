@@ -8,12 +8,14 @@
 记录数：5,000 条国际货运记录
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+from typing import Optional
+
+import numpy as np
+import pandas as pd
 
 
-def load_raw_data(data_path: str = None) -> pd.DataFrame:
+def load_raw_data(data_path: Optional[str] = None) -> pd.DataFrame:
     """
     加载原始 CSV 数据。
 
@@ -100,7 +102,7 @@ def validate_data(df: pd.DataFrame) -> pd.DataFrame:
         if valid - {0, 1}:
             print(f"[数据校验] WARNING Disruption_Occurred 包含非 0/1 值: {valid - {0, 1}}")
 
-    print(f"[数据校验] 质量校验完成 OK")
+    print("[数据校验] 质量校验完成 OK")
     return df
 
 
@@ -131,7 +133,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
             if df[col].isnull().sum() > 0:
                 df[col] = df[col].fillna(df[col].median())
         # 类别列用众数填充
-        cat_cols = df.select_dtypes(include=["object"]).columns
+        cat_cols = df.select_dtypes(include=["object", "string"]).columns
         for col in cat_cols:
             if df[col].isnull().sum() > 0:
                 df[col] = df[col].fillna(df[col].mode()[0])

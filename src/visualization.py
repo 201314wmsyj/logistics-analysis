@@ -21,7 +21,6 @@
 """
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -190,7 +189,7 @@ def plot_monthly_disruption_trend(df: pd.DataFrame):
     fig, ax1 = plt.subplots(figsize=(14, 6))
 
     # 柱状图 - 货运量
-    bars = ax1.bar(
+    ax1.bar(
         monthly["Date_Label"],
         monthly["Total"],
         color="#2E86AB",
@@ -462,7 +461,6 @@ def plot_feature_importance(feature_importance: pd.DataFrame):
         colors = ["#2E86AB"] * len(fi)
         xlabel = "Feature Importance (Random Forest)"
         title = "Feature Importance for Disruption Prediction (Random Forest)"
-        fmt = "{:.4f}"
     elif "Coefficient" in fi.columns:
         fi["Abs_Val"] = fi["Coefficient"].abs()
         fi = fi.sort_values("Abs_Val", ascending=True)
@@ -470,7 +468,6 @@ def plot_feature_importance(feature_importance: pd.DataFrame):
         colors = ["#D62828" if c > 0 else "#2E86AB" for c in fi["Coefficient"]]
         xlabel = "Absolute Coefficient Magnitude"
         title = "Feature Importance for Disruption Prediction (Logistic Regression)"
-        fmt = "{:+.3f}"
     else:
         raise KeyError("feature_importance must have 'Importance' or 'Coefficient' column")
 

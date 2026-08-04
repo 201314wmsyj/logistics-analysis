@@ -2,12 +2,13 @@
 """Tests for data_loader module."""
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
-from src.data_loader import validate_data, clean_data, engineer_features
+from src.data_loader import clean_data, engineer_features, validate_data
 
 # ---- Fixtures ----
 
@@ -44,7 +45,7 @@ def test_validate_raises_on_missing_column(valid_sample_df):
 def test_validate_warns_on_out_of_range(valid_sample_df, capsys):
     df = valid_sample_df.copy()
     df.loc[0, 'Lead_Time_Days'] = -5
-    result = validate_data(df)
+    _ = validate_data(df)
     captured = capsys.readouterr()
     assert '时效' in captured.out or 'Lead_Time_Days' in captured.out
 

@@ -17,7 +17,6 @@
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 
 
 # ================================================================
@@ -153,7 +152,6 @@ class MonteCarloEngine:
         """
         df = self.df.copy()
         y = df["Disruption_Occurred"].values
-        n = len(y)
 
         baseline_rates = _bootstrap_means(self.rng, y, n_samples)
 
@@ -178,11 +176,11 @@ class MonteCarloEngine:
         """压力测试：恶劣天气（暴风雨+飓风）概率 x3，中断率变化？"""
         df = self.df.copy()
         y = df["Disruption_Occurred"].values
-        n = len(y)
 
         baseline_rates = _bootstrap_means(self.rng, y, n_samples)
 
         severe_mask = df["Weather_Condition"].isin(["Storm", "Hurricane"])
+        n = len(y)
         weights = np.ones(n)
         weights[severe_mask.values] *= 3.0
         stressed_rates = _weighted_bootstrap_means(self.rng, y, weights, n_samples)
@@ -302,7 +300,6 @@ class MonteCarloEngine:
         from sklearn.metrics import roc_auc_score
 
         df = self.df.copy()
-        n = len(df)
 
         # ---- Step 1: Train/test split ----
         X = df[["Carrier_Reliability_Score", "Geopolitical_Risk_Score"]].values
@@ -340,7 +337,7 @@ class MonteCarloEngine:
         ])
 
         # ---- Step 5: Also bootstrap observed rate for reference ----
-        observed_rates = _bootstrap_means(self.rng, y_test, n_samples)
+        _ = _bootstrap_means(self.rng, y_test, n_samples)
 
         return {
             "scenario": f"Carrier Reliability +{improvement_pct:.0%}",
@@ -421,7 +418,7 @@ def run_monte_carlo_analysis(engine: MonteCarloEngine, n_samples: int = 10000) -
     results["roi"] = engine.simulate_reliability_improvement(improvement_pct=0.10, n_samples=n_samples)
     print(f"        模型 AUC (test): {results['roi']['model_auc_test']:.4f}")
     print(f"        可靠性 +10%: 中断率降低 {results['roi']['pct_reduction']:.1f}%")
-    print(f"        [关联性估计，非因果推断。详见 README Limitations]")
+    print("        [关联性估计，非因果推断。详见 README Limitations]")
 
     print("\n  [蒙特卡洛模拟完成]")
     return results

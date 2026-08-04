@@ -2,11 +2,13 @@
 """Tests for statistical_tests module."""
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+
 import src.statistical_tests as st_mod
 
 @pytest.fixture
@@ -61,11 +63,11 @@ def test_cramers_v_single_row():
 # ---- _bonferroni_corrected_significance ----
 
 def test_bonferroni_rejects():
-    p_adj, sig = st_mod._bonferroni_corrected_significance(0.001, 6)
+    _p_adj, sig = st_mod._bonferroni_corrected_significance(0.001, 6)
     assert sig
 
 def test_bonferroni_accepts():
-    p_adj, sig = st_mod._bonferroni_corrected_significance(0.05, 10)
+    _p_adj, sig = st_mod._bonferroni_corrected_significance(0.05, 10)
     assert not sig
 
 def test_bonferroni_clamps():
