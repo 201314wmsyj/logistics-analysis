@@ -448,9 +448,8 @@ def plot_feature_importance(feature_importance: pd.DataFrame):
     自动适配两种格式：
       - Random Forest: 'Importance' 列（0-1，全正）
       - Logistic Regression: 'Coefficient' 列（可正可负）
+    图表高度根据特征数量自动调整。
     """
-    fig, ax = plt.subplots(figsize=(10, 6))
-
     fi = feature_importance.copy()
 
     # 检测格式
@@ -469,6 +468,11 @@ def plot_feature_importance(feature_importance: pd.DataFrame):
         title = "Feature Importance for Disruption Prediction (Logistic Regression)"
     else:
         raise KeyError("feature_importance must have 'Importance' or 'Coefficient' column")
+
+    # 动态调整图表高度：每个特征约 0.4 英寸
+    n_features = len(fi)
+    fig_height = max(6, n_features * 0.4)
+    fig, ax = plt.subplots(figsize=(10, fig_height))
 
     bars = ax.barh(fi["Feature"], values, color=colors, edgecolor="white", linewidth=1, height=0.6)
 

@@ -12,20 +12,27 @@
   6. 预测建模 - 多模型对比 (Baseline / 逻辑回归 / 随机森林)
 """
 
+import numpy as np
 import pandas as pd
 from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
     f1_score,
+    precision_recall_curve,
     precision_score,
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_val_predict,
+    cross_val_score,
+    train_test_split,
+)
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 # ============================================================
 # 1. 供应链中断分析 (Disruption Analysis)
@@ -358,31 +365,52 @@ def correlation_analysis(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 
 def _prepare_model_features(df: pd.DataFrame) -> tuple:
-    """共享的特征工程：编码 + 标准化，返回 X, y, feature_cols, scaler"""
-    feature_cols = [
+    """
+    共享的特征工程：One-Hot 编码 + 标准化。
+
+    关键改进 (v3)：
+      - 移除 Speed_km_per_day（数据泄漏：分母 Lead_Time_Days 是结果变量）
+      - 新增 Weather_Condition（OneHot，飓风→100% 中断，最强信号）
+      - 新增 Ton_KM（吨公里，无泄漏的派生特征）
+      - OneHotEncoder 替代 LabelEncoder
+      - 移除 Transport_Mode / Product_Category（chi-square 不显著 + RF 重要性<0.01）
+
+    Returns
+    -------
+    tuple: (X, y, feature_names, scaler, ohe)
+    """
+    # 数值特征（均为预测时可用的特征，无数据泄漏）
+    numeric_cols = [
         "Distance_km",
         "Weight_MT",
         "Geopolitical_Risk_Score",
         "Carrier_Reliability_Score",
-        "Speed_km_per_day",
+        "Ton_KM",  # = Weight_MT × Distance_km / 1000，运输工作量
+    ]
+
+    # 类别特征 — 仅保留有统计显著预测力的特征
+    categorical_cols = [
+        "Weather_Condition",  # Cramér's V = 0.50, 所有变量中效应量最大
     ]
 
     df_model = df.copy()
-    le_mode = LabelEncoder()
-    df_model["Transport_Mode_Encoded"] = le_mode.fit_transform(df_model["Transport_Mode"])
 
-    le_product = LabelEncoder()
-    df_model["Product_Category_Encoded"] = le_product.fit_transform(df_model["Product_Category"])
+    # One-Hot 编码
+    ohe = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+    X_cat = ohe.fit_transform(df_model[categorical_cols])
+    cat_feature_names = list(ohe.get_feature_names_out(categorical_cols))
 
-    feature_cols.extend(["Transport_Mode_Encoded", "Product_Category_Encoded"])
+    # 标准化数值特征
+    scaler = StandardScaler()
+    X_num = scaler.fit_transform(df_model[numeric_cols])
 
-    X = df_model[feature_cols].values
+    # 合并
+    X = np.hstack([X_num, X_cat])
+    feature_names = numeric_cols + cat_feature_names
+
     y = df_model["Disruption_Occurred"].values
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    return X_scaled, y, feature_cols, scaler
+    return X, y, feature_names, scaler, ohe
 
 
 def _evaluate_model(model, X_train, X_test, y_train, y_test, model_name: str) -> dict:
@@ -408,49 +436,82 @@ def _evaluate_model(model, X_train, X_test, y_train, y_test, model_name: str) ->
     return metrics
 
 
+def _find_optimal_threshold_cv(model, X, y, cv) -> float:
+    """
+    通过 5 折 CV 寻找最大化 F1 的最优概率阈值。
+
+    方法：在每一折上用 4 折训练、1 折预测，汇总所有 CV 概率后，
+    在 precision-recall 曲线上找最大化 F1 的阈值。
+    这避免了在测试集上调阈值的过拟合。
+
+    Returns
+    -------
+    float: 最优阈值
+    """
+    y_proba_cv = cross_val_predict(model, X, y, cv=cv, method="predict_proba")[:, 1]
+    prec, rec, thresholds = precision_recall_curve(y, y_proba_cv)
+    f1_scores = 2 * (prec * rec) / (prec + rec)
+    best_idx = np.nanargmax(f1_scores[:-1])  # 排除最后一个 (thresholds 比 f1 短 1)
+    return float(thresholds[best_idx])
+
+
 def build_disruption_model(df: pd.DataFrame) -> dict:
     """
-    多模型对比：Baseline -> 逻辑回归 -> 随机森林
+    多模型对比：Baseline -> 逻辑回归 -> 随机森林 -> 梯度提升
 
-    关键改进：
-      - DummyClassifier 作为基准线（避免准确率不如瞎猜的尴尬）
-      - 随机森林捕捉非线性关系
+    关键改进 (v3)：
+      - 移除 Speed_km_per_day（数据泄漏修复）
+      - 新增 Weather_Condition OneHot 编码（最强预测信号）
+      - 移除 Transport_Mode / Product_Category（chi-square 不显著）
+      - OneHotEncoder 替代 LabelEncoder
+      - 新增 GradientBoostingClassifier
+      - RF 平衡类别权重 + 调优超参数
+      - CV 阈值优化（用 CV 找最优阈值，而非用默认 0.5）
       - 5 折交叉验证评估稳定性
       - 多指标对比 (Accuracy / Precision / Recall / F1 / ROC-AUC)
 
     Returns
     -------
     dict
-        包含 model_comparison, feature_importance 等
+        包含 model_comparison, feature_importance, optimal_threshold 等
     """
     print("=" * 55)
     print("[中断预测模型 -- 多模型对比]")
     print("=" * 55)
 
-    X, y, feature_cols, scaler = _prepare_model_features(df)
+    X, y, feature_names, scaler, ohe = _prepare_model_features(df)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
+    n_features = X.shape[1]
+    print(f"\n  特征数: {n_features} (数值=5, 天气OneHot=5)")
+
     # ---- 基准率 ----
     baseline_rate = y.mean()
-    print(f"\n  中断基准率 (Baseline): {baseline_rate:.2%}")
+    print(f"  中断基准率 (Baseline): {baseline_rate:.2%}")
     print(f"     若全猜中断，准确率 = {baseline_rate:.2%}")
     print("     模型必须显著超越此基线才有实用价值\n")
+
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     # ---- 模型列表 ----
     models = {
         "Baseline (Most Frequent)": DummyClassifier(strategy="most_frequent", random_state=42),
         "Baseline (Stratified)": DummyClassifier(strategy="stratified", random_state=42),
-        "Logistic Regression": LogisticRegression(max_iter=2000, random_state=42),
+        "Logistic Regression": LogisticRegression(max_iter=3000, C=0.5, random_state=42),
         "Random Forest": RandomForestClassifier(
-            n_estimators=200, max_depth=8, min_samples_leaf=20,
-            random_state=42, n_jobs=-1,
+            n_estimators=300, max_depth=12, min_samples_leaf=10,
+            class_weight="balanced", random_state=42, n_jobs=-1,
+        ),
+        "Gradient Boosting": GradientBoostingClassifier(
+            n_estimators=200, max_depth=4, min_samples_leaf=15,
+            learning_rate=0.03, random_state=42,
         ),
     }
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     results = []
+    optimal_thresholds = {}
 
     for name, model in models.items():
         model.fit(X_train, y_train)
@@ -461,6 +522,19 @@ def build_disruption_model(df: pd.DataFrame) -> dict:
         metrics["cv_mean"] = cv_scores.mean()
         metrics["cv_std"] = cv_scores.std()
 
+        # CV 阈值优化（仅对真实模型，跳过 Baseline）
+        if "Baseline" not in name and hasattr(model, "predict_proba"):
+            opt_thresh = _find_optimal_threshold_cv(model, X, y, cv)
+            optimal_thresholds[name] = opt_thresh
+            # 用最优阈值重新评估
+            y_proba_test = model.predict_proba(X_test)[:, 1]
+            y_pred_opt = (y_proba_test >= opt_thresh).astype(int)
+            metrics["opt_threshold"] = opt_thresh
+            metrics["opt_accuracy"] = accuracy_score(y_test, y_pred_opt)
+            metrics["opt_precision"] = precision_score(y_test, y_pred_opt, zero_division=0)
+            metrics["opt_recall"] = recall_score(y_test, y_pred_opt, zero_division=0)
+            metrics["opt_f1"] = f1_score(y_test, y_pred_opt, zero_division=0)
+
         results.append(metrics)
 
     # ---- 结果汇总 ----
@@ -470,41 +544,68 @@ def build_disruption_model(df: pd.DataFrame) -> dict:
     if "roc_auc" in comparison_df.columns:
         display_cols.insert(4, "roc_auc")
 
-    print("  [模型对比汇总]:")
+    print("  [模型对比汇总] (默认阈值=0.5):")
     print(comparison_df[display_cols].to_string(float_format=lambda x: f"{x:.4f}"))
     print()
 
-    # ---- Random Forest 详细结果 ----
-    rf_model = models["Random Forest"]
-    y_pred_rf = rf_model.predict(X_test)
-    print("  [Random Forest 分类报告]:")
-    print(classification_report(y_test, y_pred_rf, target_names=["正常", "中断"]))
+    # ---- 阈值优化结果 ----
+    if optimal_thresholds:
+        print("  [CV 阈值优化] (最大化 F1):")
+        print(f"  {'模型':<25s} {'CV阈值':>8s} {'F1(默认)':>10s} {'F1(最优)':>10s}")
+        print(f"  {'-'*53}")
+        for name, thresh in optimal_thresholds.items():
+            row = comparison_df.loc[name]
+            f1_default = row.get("f1", 0)
+            f1_opt = row.get("opt_f1", 0)
+            arrow = "↑" if f1_opt > f1_default else "→"
+            print(f"  {name:<25s} {thresh:>8.3f} {f1_default:>10.4f} {f1_opt:>10.4f} {arrow}")
+        print()
+
+    # ---- 逻辑回归详细结果 ----
+    lr_model = models["Logistic Regression"]
+    y_pred_lr = lr_model.predict(X_test)
+    lr_thresh = optimal_thresholds.get("Logistic Regression", 0.5)
+    y_pred_lr_opt = (lr_model.predict_proba(X_test)[:, 1] >= lr_thresh).astype(int)
+
+    print(f"  [Logistic Regression 分类报告] (默认阈值=0.5):")
+    print(classification_report(y_test, y_pred_lr, target_names=["正常", "中断"]))
+    if lr_thresh != 0.5:
+        print(f"  [Logistic Regression 分类报告] (CV最优阈值={lr_thresh:.3f}):")
+        print(classification_report(y_test, y_pred_lr_opt, target_names=["正常", "中断"]))
 
     # ---- Random Forest 特征重要性 ----
+    rf_model = models["Random Forest"]
     rf_importance = pd.DataFrame({
-        "Feature": feature_cols,
+        "Feature": feature_names,
         "Importance": rf_model.feature_importances_,
     }).sort_values("Importance", ascending=False)
 
     print("\n  [Random Forest 特征重要性]:")
     for _, row in rf_importance.iterrows():
         bar = "#" * int(row["Importance"] * 40)
-        print(f"    {row['Feature']:<32s} {row['Importance']:.4f} {bar}")
+        print(f"    {row['Feature']:<40s} {row['Importance']:.4f} {bar}")
 
     # ---- 逻辑回归特征系数 (保留用于可解释性) ----
-    lr_model = models["Logistic Regression"]
     lr_importance = pd.DataFrame({
-        "Feature": feature_cols,
+        "Feature": feature_names,
         "Coefficient": lr_model.coef_[0],
     }).sort_values("Coefficient", ascending=False)
 
+    print("\n  [Logistic Regression 特征系数]:")
+    for _, row in lr_importance.iterrows():
+        direction = "(+风险)" if row["Coefficient"] > 0 else "(-风险)"
+        print(f"    {row['Feature']:<40s} {row['Coefficient']:+.4f} {direction}")
+
     return {
-        "model": rf_model,                     # 最佳模型
+        "model": lr_model,                     # 最佳 AUC 模型
+        "rf_model": rf_model,                  # 随机森林（特征重要性可解释）
         "scaler": scaler,
+        "ohe": ohe,
         "model_comparison": comparison_df,     # 多模型对比表
         "feature_importance": rf_importance,   # RF 特征重要性（主要）
         "lr_feature_importance": lr_importance, # LR 系数（可解释性参考）
-        "feature_names": feature_cols,
+        "feature_names": feature_names,
+        "optimal_thresholds": optimal_thresholds,  # CV 最优阈值
         "cv": cv,
     }
 

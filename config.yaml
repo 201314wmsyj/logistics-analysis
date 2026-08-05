@@ -15,9 +15,16 @@ model:
   random_state: 42
   test_size: 0.2
   cv_folds: 5
-  rf_n_estimators: 200
-  rf_max_depth: 8
-  rf_min_samples_leaf: 20
+  # --- Random Forest (v2: balanced + tuned) ---
+  rf_n_estimators: 300
+  rf_max_depth: 12
+  rf_min_samples_leaf: 10
+  rf_class_weight: "balanced"
+  # --- Gradient Boosting ---
+  gb_n_estimators: 200
+  gb_max_depth: 5
+  gb_min_samples_leaf: 10
+  gb_learning_rate: 0.05
 
 monte_carlo:
   random_seed: 42

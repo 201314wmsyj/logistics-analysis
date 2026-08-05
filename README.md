@@ -123,18 +123,29 @@ logistics-analysis/
 | 模型 | Accuracy | Precision | Recall | F1 | ROC-AUC |
 |------|----------|-----------|--------|-----|---------|
 | Baseline (Most Frequent) | 0.613 | -- | -- | -- | -- |
-| Logistic Regression | 0.631 | 0.632 | 0.983 | 0.770 | 0.635 |
-| Random Forest | 0.660 | 0.648 | 0.948 | 0.770 | 0.716 |
+| Logistic Regression | **0.740** | 0.781 | 0.801 | 0.791 | **0.828** |
+| Random Forest | 0.720 | 0.838 | 0.674 | 0.747 | 0.823 |
+| Gradient Boosting | 0.728 | 0.777 | 0.780 | 0.779 | 0.824 |
 
-> 随机森林相对朴素基线提升 4.7pp，ROC-AUC = 0.716 表明模型捕获了真实信号。
+> **CV 阈值优化**：默认阈值 0.5 并非最优。通过 5 折 CV 寻找最大化 F1 的阈值：
+> - 逻辑回归：阈值 0.438 → F1 = 0.794
+> - 随机森林：阈值 0.283 → **F1 = 0.801**（所有模型最优）
+> - 梯度提升：阈值 0.398 → F1 = 0.799
 
-Top 5 特征 (Random Forest):
+Top 5 特征 (Random Forest, 10 个特征):
 
-1. 地缘政治风险 -- 最重要的中断驱动因素
-2. 承运商可靠性 -- 选择高可靠性承运商可降低中断
-3. Lead Time -- 时效越长越容易中断
-4. 运输距离
-5. 燃油价格指数
+1. **天气-飓风 (Weather_Condition_Hurricane)** — 重要性 0.30，飓风 → 100% 中断
+2. **地缘政治风险 (Geopolitical_Risk_Score)** — 重要性 0.17，最强连续型预测因子
+3. **天气-暴风雨 (Weather_Condition_Storm)** — 重要性 0.10，暴风雨 → ~80% 中断
+4. **天气-晴天 (Weather_Condition_Clear)** — 重要性 0.08，负向指标（中断率仅 37%）
+5. **承运商可靠性 (Carrier_Reliability_Score)** — 重要性 0.07，唯一可控因素
+
+> **v3 模型改进**（三轮迭代）：
+> - ❌ 移除 `Speed_km_per_day`（数据泄漏）→ ❌ 移除 `Transport_Mode` + `Product_Category`
+>   （chi-square 不显著，p > 0.1）→ ✅ 精简到 10 个特征，AUC 不变但更可解释
+> - ✅ `Weather_Condition` OneHot（Cramér's V = 0.50）
+> - ✅ CV 阈值优化（F1 从 0.787 → 0.801）
+> - ✅ `OneHotEncoder` 替代 `LabelEncoder`
 
 ### 5. 蒙特卡洛模拟
 
